@@ -61,3 +61,14 @@ variable "network_firewall_policy_enforcement_order" {
   default     = null
   description = "Set the order that Firewall Rules and Firewall Policies are evaluated. Valid values are `BEFORE_CLASSIC_FIREWALL` and `AFTER_CLASSIC_FIREWALL`. (default null or equivalent to `AFTER_CLASSIC_FIREWALL`)"
 }
+
+variable "service_project_ids" {
+  type        = list(string)
+  description = "List of existing service project IDs to attach to this Shared VPC host. Only effective when shared_vpc_host = true. Service projects must already exist before applying."
+  default     = []
+
+  validation {
+    condition     = alltrue([for id in var.service_project_ids : id != ""])
+    error_message = "service_project_ids must not contain empty strings."
+  }
+}

@@ -54,3 +54,41 @@ run "plan_with_multiple_subnets" {
     error_message = "Expected 2 subnets"
   }
 }
+
+run "plan_shared_vpc_subnet_delegation" {
+  command = plan
+
+  variables {
+    subnets = [
+      {
+        subnet_name   = "snet-shared"
+        subnet_ip     = "10.10.2.0/24"
+        subnet_region = "asia-southeast1"
+      }
+    ]
+    subnet_users = {
+      "snet-shared" = [
+        "serviceAccount:sa-svc@service-project.iam.gserviceaccount.com",
+        "group:devteam@example.com",
+      ]
+    }
+  }
+
+  assert {
+    condition     = length(google_compute_subnetwork_iam_member.subnet_users) == 2
+    error_message = "Expected 2 IAM member bindings for subnet delegation"
+  }
+}
+
+run "plan_no_subnet_delegation" {
+  command = plan
+
+  variables {
+    subnet_users = {}
+  }
+
+  assert {
+    condition     = length(google_compute_subnetwork_iam_member.subnet_users) == 0
+    error_message = "Expected no IAM bindings when subnet_users is empty"
+  }
+}

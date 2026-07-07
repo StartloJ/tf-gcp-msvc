@@ -3,6 +3,22 @@ locals {
     for x in var.subnets :
     "${x.subnet_region}/${x.subnet_name}" => x
   }
+
+  subnets_by_name = {
+    for x in var.subnets : x.subnet_name => x
+  }
+
+  # Flatten subnet name + member pairs into a single map for for_each.
+  subnet_iam_pairs = merge([
+    for subnet_name, members in var.subnet_users : {
+      for member in members :
+      "${subnet_name}/${member}" => {
+        subnet_name = subnet_name
+        region      = local.subnets_by_name[subnet_name].subnet_region
+        member      = member
+      }
+    }
+  ]...)
 }
 
 /******************************************
@@ -42,4 +58,17 @@ resource "google_compute_subnetwork" "subnetwork" {
       flow_sampling        = each.value.subnet_flow_logs_sampling
     }
   }
+}
+
+/******************************************
+    Shared VPC subnet IAM delegation
+ *****************************************/
+resource "google_compute_subnetwork_iam_member" "subnet_users" {
+  for_each = local.subnet_iam_pairs
+
+  project    = var.project_id
+  region     = each.value.region
+  subnetwork = each.value.subnet_name
+  role       = "roles/compute.networkUser"
+  member     = each.value.member
 }

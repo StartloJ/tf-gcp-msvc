@@ -22,3 +22,8 @@ output "project_id" {
   value       = var.shared_vpc_host && length(google_compute_shared_vpc_host_project.shared_vpc_host) > 0 ? google_compute_shared_vpc_host_project.shared_vpc_host[0].project : google_compute_network.network.project
   description = "VPC project id"
 }
+
+output "service_project_ids" {
+  value       = [for sp in google_compute_shared_vpc_service_project.service_projects : sp.service_project]
+  description = "Service project IDs attached to this Shared VPC host"
+}

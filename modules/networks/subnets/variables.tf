@@ -35,3 +35,14 @@ variable "secondary_ranges" {
   description = "Secondary ranges that will be used in some of the subnets"
   default     = {}
 }
+
+variable "subnet_users" {
+  type        = map(list(string))
+  description = "Map of subnet name to list of IAM members granted roles/compute.networkUser on that subnet. Used to delegate subnets to service project identities in a Shared VPC setup. Members must already exist (e.g. 'serviceAccount:sa@project.iam.gserviceaccount.com', 'group:team@domain.com')."
+  default     = {}
+
+  validation {
+    condition     = alltrue(flatten([for members in values(var.subnet_users) : [for m in members : m != ""]]))
+    error_message = "subnet_users must not contain empty member strings."
+  }
+}
