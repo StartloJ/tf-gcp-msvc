@@ -1,0 +1,51 @@
+# Shared VPC example values
+# Copy this file to terraform.tfvars and fill in your actual project/folder IDs.
+# terraform.tfvars is gitignored — never commit real IDs or service account emails.
+
+# ── GCP Organization / Folder ──────────────────────────────────────────────────
+# Numeric folder ID that contains the host project (no "folders/" prefix here).
+# Run: gcloud resource-manager folders list --organization=ORG_ID
+host_folder_id = "123456789012"
+
+# IAM members who can configure Shared VPC within host_folder_id.
+# They receive roles/compute.xpnAdmin on the folder.
+# Typically: your network-admin group and the Terraform SA.
+network_admin_members = [
+  "group:network-admins@example.com",
+  "serviceAccount:terraform@my-host-project.iam.gserviceaccount.com",
+]
+
+# ── Projects ───────────────────────────────────────────────────────────────────
+# Project ID of the host project (owns the Shared VPC).
+host_project_id = "my-host-project"
+
+# Existing service project IDs to attach to the Shared VPC.
+# Run: gcloud projects list --filter="parent.id=FOLDER_ID"
+service_project_ids = [
+  "my-service-project-a",
+  "my-service-project-b",
+]
+
+# ── Region ─────────────────────────────────────────────────────────────────────
+region = "asia-southeast1"
+
+# ── Subnet delegation ──────────────────────────────────────────────────────────
+# Map subnet name → list of IAM members who receive roles/compute.networkUser.
+# Typical values: the Compute Engine default SA or a workload identity SA
+# from each service project.
+#
+# To find a project's Compute SA:
+#   gcloud iam service-accounts list --project=SERVICE_PROJECT_ID \
+#     --filter="email~compute@developer.gserviceaccount.com"
+subnet_users = {
+  # Both service projects can launch workloads in snet-app-shared
+  "snet-app-shared" = [
+    "serviceAccount:111111111111-compute@developer.gserviceaccount.com", # service-project-a
+    "serviceAccount:222222222222-compute@developer.gserviceaccount.com", # service-project-b
+  ]
+
+  # Only service-project-a can access the data-tier subnet
+  "snet-data-shared" = [
+    "serviceAccount:111111111111-compute@developer.gserviceaccount.com", # service-project-a
+  ]
+}
