@@ -1,3 +1,5 @@
+data "google_project" "example" {}
+
 module "example_main_vpc" {
   source = "../../modules/networks/vpc"
 

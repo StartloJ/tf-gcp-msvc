@@ -34,4 +34,5 @@ output "example_VPN_classic" {
 output "example_gke_private" {
   description = "The GKE Private resource being created"
   value       = module.example-gke-private
+  sensitive   = true
 }

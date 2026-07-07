@@ -1,14 +1,14 @@
 terraform {
-  required_version = ">= 0.13.0"
+  required_version = ">= 1.12"
 
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 4.25.0, < 7"
+      version = ">= 7.10, < 8"
     }
   }
 
   provider_meta "google" {
-    module_name = "blueprints/terraform/terraform-google-network:subnets/v9.1.0"
+    module_name = "blueprints/terraform/terraform-google-network:subnets/v9.4.0"
   }
 }

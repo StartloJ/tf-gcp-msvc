@@ -1,14 +1,12 @@
 locals {
   enable_example_api = false
-  enable_examplecms  = true
-  enable_exampleapi  = false
 }
 
 /************************************************
     example application Workspace
 ************************************************/
 
-resource "kubernetes_namespace" "example-api" {
+resource "kubernetes_namespace_v1" "example-api" {
   metadata {
     name = "example-api"
 
@@ -20,7 +18,7 @@ resource "kubernetes_namespace" "example-api" {
   }
 }
 
-resource "kubernetes_namespace" "example-web" {
+resource "kubernetes_namespace_v1" "example-web" {
   metadata {
     name = "example-web"
 
@@ -39,7 +37,7 @@ resource "kubernetes_deployment_v1" "simple-api" {
   count = local.enable_example_api ? 1 : 0
   metadata {
     name      = "simple-api"
-    namespace = kubernetes_namespace.example-api.metadata[0].name
+    namespace = kubernetes_namespace_v1.example-api.metadata[0].name
   }
 
   spec {
@@ -96,7 +94,7 @@ resource "kubernetes_service_v1" "simple-api" {
   count = local.enable_example_api ? 1 : 0
   metadata {
     name      = "simple-api"
-    namespace = kubernetes_namespace.example-api.metadata[0].name
+    namespace = kubernetes_namespace_v1.example-api.metadata[0].name
   }
 
   spec {
@@ -117,7 +115,7 @@ resource "kubernetes_ingress_v1" "simple-api" {
 
   metadata {
     name      = "simple-api"
-    namespace = kubernetes_namespace.example-api.metadata[0].name
+    namespace = kubernetes_namespace_v1.example-api.metadata[0].name
   }
 
   spec {

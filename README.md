@@ -26,3 +26,29 @@ The collection of the terraform modules that used for provision the infrastructu
 3. After **Maintainer** approved, you can merge your code into main branch.
 
 > Note! Please ensure every your commit was pass the terraform linter and security scan before pushed to remote repository.
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+No requirements.
+
+## Providers
+
+No providers.
+
+## Modules
+
+No modules.
+
+## Resources
+
+No resources.
+
+## Inputs
+
+No inputs.
+
+## Outputs
+
+No outputs.
+<!-- END_TF_DOCS -->

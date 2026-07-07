@@ -1,25 +1,26 @@
 terraform {
-  required_version = ">= 1.3"
+  required_version = ">= 1.12"
+
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "< 7"
+      version = ">= 7.10, < 8"
     }
     google-beta = {
       source  = "hashicorp/google-beta"
-      version = ">= 4.64, < 7"
+      version = ">= 7.10, < 8"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "2.32.0"
+      version = "~> 3.2"
     }
     helm = {
       source  = "hashicorp/helm"
-      version = "2.15.0"
+      version = "~> 3.2"
     }
     http = {
       source  = "hashicorp/http"
-      version = "3.4.5"
+      version = "~> 3.6"
     }
   }
 
@@ -29,6 +30,6 @@ terraform {
   }
 
   provider_meta "google" {
-    module_name = "blueprints/terraform/terraform-google-network/v9.1.0"
+    module_name = "blueprints/terraform/terraform-google-network/v9.4.0"
   }
 }

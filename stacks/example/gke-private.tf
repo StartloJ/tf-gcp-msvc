@@ -17,7 +17,7 @@ data "google_client_config" "dev" {}
 
 module "example-gke-private" {
   source  = "terraform-google-modules/kubernetes-engine/google//modules/private-cluster"
-  version = "~> 32.0"
+  version = "~> 44.0"
 
   project_id        = data.google_project.example.project_id
   name              = "example-gke-private"
@@ -38,7 +38,6 @@ module "example-gke-private" {
   default_max_pods_per_node = 16
   remove_default_node_pool  = true
   deletion_protection       = false
-  network_policy            = false
 
   grant_registry_access = true
 
