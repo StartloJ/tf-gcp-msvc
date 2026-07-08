@@ -72,3 +72,11 @@ variable "service_project_ids" {
     error_message = "service_project_ids must not contain empty strings."
   }
 }
+
+# tflint-ignore: terraform_unused_declarations
+variable "labels" {
+  type        = map(string)
+  description = "Labels to apply to all resources managed by this module."
+  default     = {}
+}
+

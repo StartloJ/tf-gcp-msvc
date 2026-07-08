@@ -3,6 +3,7 @@ mock_provider "google" {}
 variables {
   project_id   = "test-project"
   network_name = "test-network"
+  labels       = { managed_by = "terraform" }
   subnets = [
     {
       subnet_name   = "test-subnet-01"
@@ -28,6 +29,11 @@ run "plan_with_one_subnet" {
   assert {
     condition     = var.subnets[0].subnet_region == "asia-southeast1"
     error_message = "Subnet region not passed correctly"
+  }
+
+  assert {
+    condition     = var.labels["managed_by"] == "terraform"
+    error_message = "labels variable not passed correctly (google_compute_subnetwork does not support labels attribute)"
   }
 }
 

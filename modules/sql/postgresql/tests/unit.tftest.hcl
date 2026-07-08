@@ -13,6 +13,7 @@ variables {
   enable_default_user         = false
   deletion_protection         = false
   deletion_protection_enabled = false
+  labels                      = { managed_by = "terraform" }
 }
 
 run "plan_postgresql_instance" {
@@ -31,6 +32,11 @@ run "plan_postgresql_instance" {
   assert {
     condition     = var.name == "test-pg-instance"
     error_message = "name variable not passed correctly"
+  }
+
+  assert {
+    condition     = google_sql_database_instance.default.settings[0].user_labels["managed_by"] == "terraform"
+    error_message = "labels not applied to Cloud SQL instance via user_labels"
   }
 }
 

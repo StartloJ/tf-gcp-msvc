@@ -7,7 +7,7 @@ module "example_gar_api" {
 
   project_id    = data.google_project.example.project_id
   location      = local.default_region
-  repository_id = "example-api"
+  repository_id = "${local.ar_name}-api"
   format        = "DOCKER"
   description   = "Artifact Registry for example API"
 
@@ -39,19 +39,16 @@ module "example_gar_api" {
   #   ]
   # }
 
-  labels = {
-    app = "example-api"
-    env = "dev"
-  }
-
+  labels = local.common_labels
 }
+
 
 module "example_gar_cms" {
   source = "../../modules/workload/artifact-registry"
 
   project_id    = data.google_project.example.project_id
   location      = local.default_region
-  repository_id = "example-cms"
+  repository_id = "${local.ar_name}-cms"
   format        = "DOCKER"
   description   = "Artifact Registry for example CMS"
 
@@ -82,9 +79,5 @@ module "example_gar_cms" {
   #   ]
   # }
 
-  labels = {
-    app = "example-cms"
-    env = "dev"
-  }
-
+  labels = local.common_labels
 }

@@ -149,3 +149,10 @@ variable "rules" {
   }))
   default = []
 }
+
+# tflint-ignore: terraform_unused_declarations
+variable "labels" {
+  type        = map(string)
+  description = "Labels to apply to all resources managed by this module."
+  default     = {}
+}

@@ -1,5 +1,4 @@
 locals {
-  sql_pg_name                 = "example-sql-pg"
   sql_pg_version              = "POSTGRES_16"
   sql_pg_master_instance_type = "db-custom-2-7680"
   sql_pg_db_name              = "example-db"
@@ -11,7 +10,7 @@ locals {
 module "example_cloud-sql-pg" {
   source = "../../modules/sql/postgresql"
 
-  name                 = local.sql_pg_name
+  name                 = local.sql_name
   project_id           = data.google_project.example.project_id
   random_instance_name = true
   region               = local.default_region
@@ -30,10 +29,7 @@ module "example_cloud-sql-pg" {
     { name = "autovacuum", value = "off" }
   ]
 
-  user_labels = {
-    env = "dev"
-    app = "example"
-  }
+  labels = local.common_labels
 
   ip_configuration = {
     ipv4_enabled                                  = true

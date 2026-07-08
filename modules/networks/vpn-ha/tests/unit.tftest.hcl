@@ -9,6 +9,7 @@ variables {
   region      = "asia-southeast1"
   router_name = ""
   tunnels     = {}
+  labels      = { managed_by = "terraform" }
 }
 
 run "plan_ha_vpn_no_tunnels" {

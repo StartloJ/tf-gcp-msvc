@@ -1,6 +1,19 @@
 mock_provider "google" {}
 mock_provider "google-beta" {}
 
+variables {
+  org         = "test"
+  domain      = "platform"
+  env         = "shd"
+  region_code = "sg"
+  purpose     = "shared"
+  app         = "shared-network"
+  component   = "shared-vpc"
+  owner_team  = "netops"
+  cost_center = "cc-test"
+  data_class  = "internal"
+}
+
 # Baseline: host project only, no folder IAM, no service projects
 run "plan_host_only_no_folder" {
   command = plan
@@ -14,8 +27,8 @@ run "plan_host_only_no_folder" {
   }
 
   assert {
-    condition     = module.shared_vpc.network_name == "shared-vpc"
-    error_message = "Shared VPC network name should be shared-vpc"
+    condition     = module.shared_vpc.network_name == "vpc-test-shared-shd"
+    error_message = "Shared VPC network name should follow vpc-<org>-<purpose>-<env> pattern"
   }
 
   assert {
@@ -50,7 +63,7 @@ run "plan_folder_iam_only" {
   }
 }
 
-# Full Shared VPC: folder IAM + two service projects + subnet delegation
+# Full Shared VPC: folder IAM + two service projects + subnet delegation + labels
 run "plan_shared_vpc_full" {
   command = plan
 
@@ -62,19 +75,19 @@ run "plan_shared_vpc_full" {
     ]
     service_project_ids = ["svc-project-a", "svc-project-b"]
     subnet_users = {
-      "snet-app-shared" = [
+      "snet-test-platform-shd-sg-app" = [
         "serviceAccount:111-compute@developer.gserviceaccount.com",
         "serviceAccount:222-compute@developer.gserviceaccount.com",
       ]
-      "snet-data-shared" = [
+      "snet-test-platform-shd-sg-data" = [
         "serviceAccount:111-compute@developer.gserviceaccount.com",
       ]
     }
   }
 
   assert {
-    condition     = module.shared_vpc.network_name == "shared-vpc"
-    error_message = "Shared VPC network name should be shared-vpc"
+    condition     = module.shared_vpc.network_name == "vpc-test-shared-shd"
+    error_message = "Shared VPC network name should follow vpc-<org>-<purpose>-<env> pattern"
   }
 
   assert {
@@ -89,6 +102,11 @@ run "plan_shared_vpc_full" {
 
   assert {
     condition     = length(module.shared_subnets.subnet_iam_members) == 3
-    error_message = "Expected 3 IAM member bindings (2 for snet-app-shared, 1 for snet-data-shared)"
+    error_message = "Expected 3 IAM member bindings (2 for app subnet, 1 for data subnet)"
+  }
+
+  assert {
+    condition     = local.common_labels["managed_by"] == "terraform"
+    error_message = "common_labels must contain managed_by = terraform"
   }
 }

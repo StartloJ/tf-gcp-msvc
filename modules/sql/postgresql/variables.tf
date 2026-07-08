@@ -156,8 +156,14 @@ variable "database_flags" {
 }
 
 variable "user_labels" {
-  description = "The key/value labels for the Cloud SQL instances."
+  description = "The key/value labels for the Cloud SQL instances. Deprecated: use var.labels instead; this variable is retained for backward compatibility."
   type        = map(string)
+  default     = {}
+}
+
+variable "labels" {
+  type        = map(string)
+  description = "Labels to apply to all resources managed by this module via settings.user_labels."
   default     = {}
 }
 

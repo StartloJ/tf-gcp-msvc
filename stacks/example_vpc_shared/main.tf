@@ -62,7 +62,7 @@ module "shared_vpc" {
   source = "../../modules/networks/vpc"
 
   project_id      = var.host_project_id
-  network_name    = "shared-vpc"
+  network_name    = local.vpc_name
   description     = "Shared VPC owned by host project; subnets delegated to service projects"
   routing_mode    = "GLOBAL"
   shared_vpc_host = true
@@ -73,6 +73,7 @@ module "shared_vpc" {
   auto_create_subnetworks                = false
   delete_default_internet_gateway_routes = false
   mtu                                    = 1460
+  labels                                 = local.common_labels
 }
 
 /******************************************
@@ -84,10 +85,11 @@ module "shared_subnets" {
   project_id   = var.host_project_id
   network_name = module.shared_vpc.network_name
 
+  labels = local.common_labels
   subnets = [
     {
       # General application workloads — delegate to all service project SAs
-      subnet_name           = "snet-app-shared"
+      subnet_name           = "${local.subnet_name}-app"
       subnet_ip             = "10.100.0.0/24"
       subnet_region         = var.region
       subnet_private_access = "true"
@@ -97,7 +99,7 @@ module "shared_subnets" {
     },
     {
       # Data-tier workloads — restrict delegation to selected SAs only
-      subnet_name           = "snet-data-shared"
+      subnet_name           = "${local.subnet_name}-data"
       subnet_ip             = "10.100.1.0/24"
       subnet_region         = var.region
       subnet_private_access = "true"

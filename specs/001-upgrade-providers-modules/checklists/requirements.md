@@ -32,11 +32,15 @@
 ## Notes
 
 - All items pass. Specification is ready for `/speckit-implement`.
-- SC-001 through SC-007 are fully verifiable via CLI commands and the floci services
-  stack without knowledge of implementation choices.
+- SC-001 through SC-007 cover provider/module upgrades; SC-008 through SC-011 cover the
+  naming convention and label policy added 2026-07-08.
 - Actual latest versions sourced from upstream GitHub repositories on 2026-07-07:
   Terraform 1.15.7, google 7.39.0, kubernetes 3.2.1, helm 3.2.0, http 3.6.0,
   random 3.9.0, null 3.3.0, GKE module 44.3.0.
 - Hardcoded credentials in `cloud-sql-pg.tf` noted in Assumptions as explicitly
   out of scope for this feature.
-- 3 clarification questions answered 2026-07-07 — see spec `## Clarifications` section.
+- 3 clarification questions answered 2026-07-07; 4 further questions answered
+  2026-07-08 (naming convention + label policy) — see spec `## Clarifications` section.
+- Naming convention policy sourced from Notion TF-development page (2026-07-08).
+  All naming tokens are variable-driven for multi-org portability. Existing resources
+  in `stacks/example/` must be renamed; state migration via `terraform state mv` preferred.

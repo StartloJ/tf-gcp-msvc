@@ -4,6 +4,7 @@ mock_provider "google-beta" {}
 variables {
   project_id   = "test-project"
   network_name = "test-vpc"
+  labels       = { managed_by = "terraform" }
 }
 
 run "plan_basic_vpc" {
@@ -17,6 +18,11 @@ run "plan_basic_vpc" {
   assert {
     condition     = var.project_id == "test-project"
     error_message = "project_id variable not passed correctly"
+  }
+
+  assert {
+    condition     = var.labels["managed_by"] == "terraform"
+    error_message = "labels variable not passed correctly (google_compute_network does not support labels attribute)"
   }
 }
 

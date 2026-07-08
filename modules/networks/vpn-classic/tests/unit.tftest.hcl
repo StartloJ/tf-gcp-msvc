@@ -8,6 +8,7 @@ variables {
   gateway_name = "test-vpn-gateway"
   tunnel_count = 1
   peer_ips     = ["8.8.8.8"]
+  labels       = { managed_by = "terraform" }
 }
 
 run "plan_classic_vpn_gateway" {

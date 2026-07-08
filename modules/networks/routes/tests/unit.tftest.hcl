@@ -4,6 +4,7 @@ variables {
   project_id   = "test-project"
   network_name = "test-network"
   routes       = []
+  labels       = { managed_by = "terraform" }
 }
 
 run "plan_with_no_routes" {

@@ -27,12 +27,13 @@ locals {
 resource "google_compute_subnetwork" "subnetwork" {
   for_each = local.subnets
 
-  project                    = var.project_id
-  name                       = each.value.subnet_name
-  description                = lookup(each.value, "description", null)
-  region                     = each.value.subnet_region
-  network                    = var.network_name
-  ip_cidr_range              = each.value.subnet_ip
+  project       = var.project_id
+  name          = each.value.subnet_name
+  description   = lookup(each.value, "description", null)
+  region        = each.value.subnet_region
+  network       = var.network_name
+  ip_cidr_range = each.value.subnet_ip
+  # google_compute_subnetwork does not support labels; variable declared for interface consistency
   private_ip_google_access   = lookup(each.value, "subnet_private_access", false)
   private_ipv6_google_access = lookup(each.value, "subnet_private_ipv6_access", false)
   purpose                    = lookup(each.value, "purpose", null)

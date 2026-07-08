@@ -114,6 +114,7 @@ variable "create_vpn_gateway" {
   type        = bool
 }
 
+# tflint-ignore: terraform_unused_declarations
 variable "labels" {
   description = "Labels for vpn components"
   type        = map(string)

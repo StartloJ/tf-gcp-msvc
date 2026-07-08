@@ -6,6 +6,7 @@ variables {
   repository_id = "test-repo"
   location      = "asia-southeast1"
   format        = "DOCKER"
+  labels        = { managed_by = "terraform" }
 }
 
 run "plan_docker_repository" {
@@ -24,6 +25,11 @@ run "plan_docker_repository" {
   assert {
     condition     = var.location == "asia-southeast1"
     error_message = "location variable not passed correctly"
+  }
+
+  assert {
+    condition     = google_artifact_registry_repository.repo.labels["managed_by"] == "terraform"
+    error_message = "labels not applied to artifact registry resource"
   }
 }
 

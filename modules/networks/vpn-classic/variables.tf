@@ -146,3 +146,11 @@ variable "route_tags" {
   description = "A list of instance tags to which this route applies."
   default     = []
 }
+
+# tflint-ignore: terraform_unused_declarations
+variable "labels" {
+  type        = map(string)
+  description = "Labels variable for interface consistency. Classic VPN gateway and tunnel resources do not support a labels attribute; this variable is accepted but not applied to resources."
+  default     = {}
+}
+

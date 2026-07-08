@@ -138,3 +138,124 @@ Existing file at `.terraform-docs.yml`. Currently pins `version: ">= 0.12.0, < 1
 
 **Target**: Update to `version: ">= 0.18.0, < 1.0.0"` to access the latest
 `terraform-docs` binary compatible with the post-upgrade module structures.
+
+---
+
+## Entity 7: `common_labels` Stack Local
+
+New entity — defined once per stack in `locals.tf`. Provides the canonical 10-key
+label map that is passed to every module via its `labels` argument.
+
+**Fields**:
+
+| Key | Source | Allowed values / type |
+|---|---|---|
+| `org` | `var.org` | free-form string (e.g. `"obk"`) |
+| `landing_zone` | constant | `"gcp_lz"` |
+| `env` | `var.env` | `shd` \| `prd` \| `np` \| `sbx` (validated) |
+| `domain` | `var.domain` | free-form string (e.g. `"platform"`, `"data"`) |
+| `app` | `var.app` | free-form string (e.g. `"shared_network"`) |
+| `component` | `var.component` | free-form string (e.g. `"vpc"`, `"subnet"`) |
+| `owner_team` | `var.owner_team` | free-form string (e.g. `"netops"`) |
+| `cost_center` | `var.cost_center` | free-form billing code string |
+| `managed_by` | constant | `"terraform"` — never a variable |
+| `data_class` | `var.data_class` | `public` \| `internal` \| `confidential` \| `restricted` \| `na` (validated) |
+
+**Validation rules**:
+- `env`: validated with `contains(["shd", "prd", "np", "sbx"], var.env)` in `variables.tf`.
+- `data_class`: validated with `contains(["public", "internal", "confidential", "restricted", "na"], var.data_class)`.
+- All other keys: free-form, validated only by code review.
+
+**Usage pattern**:
+```hcl
+# In stack locals.tf
+locals {
+  common_labels = {
+    org          = var.org
+    landing_zone = "gcp_lz"
+    env          = var.env
+    domain       = var.domain
+    app          = var.app
+    component    = var.component
+    owner_team   = var.owner_team
+    cost_center  = var.cost_center
+    managed_by   = "terraform"
+    data_class   = var.data_class
+  }
+}
+
+# In stack main.tf (module call)
+module "vpc" {
+  source = "../../modules/networks/vpc"
+  labels = local.common_labels
+  # ...
+}
+```
+
+---
+
+## Entity 8: Module `labels` Input Variable
+
+New entity — declared in every module's `variables.tf`. Receives `common_labels`
+from the stack and merges it into every resource managed by the module.
+
+**Declaration** (identical across all modules):
+
+```hcl
+variable "labels" {
+  type        = map(string)
+  description = "Labels to apply to all resources managed by this module. Merge with any resource-specific labels using merge(var.labels, {...})."
+  default     = {}
+}
+```
+
+**Merge pattern inside module `main.tf`**:
+
+```hcl
+resource "google_compute_network" "vpc" {
+  # ...
+  labels = merge(var.labels, {
+    component = "vpc"   # resource-specific override or addition
+  })
+}
+```
+
+**Applies to modules**:
+- `modules/networks/vpc`
+- `modules/networks/subnets`
+- `modules/networks/firewall-rules`
+- `modules/networks/routes`
+- `modules/networks/router-nat`
+- `modules/networks/vpn-classic`
+- `modules/networks/vpn-ha`
+- `modules/sql/postgresql`
+- `modules/workload/artifact-registry`
+
+---
+
+## Entity 9: Resource Naming Token Set
+
+New entity — the set of Terraform variables that together produce a compliant resource
+name for any resource type in the project.
+
+**Tokens**:
+
+| Token | Variable | Description |
+|---|---|---|
+| `<org>` | `var.org` | Organisation abbreviation (e.g. `obk`) |
+| `<domain>` | `var.domain` | Business domain (e.g. `platform`, `data`, `connectivity`) |
+| `<env>` | `var.env` | Environment code (`shd`, `prd`, `np`, `sbx`) |
+| `<region>` | `var.region_code` | Short region code (e.g. `th` for asia-southeast2, `sg` for asia-southeast1) |
+| `<purpose>` | caller-supplied | Workload-specific descriptor (e.g. `main`, `lz`, `egress`) |
+| `<peer>` | caller-supplied | VPN peer name (e.g. `onprem`) |
+| `nn` | sequence counter | Zero-padded integer for numbered resources (e.g. `01`) |
+
+**Assembly example**:
+```hcl
+locals {
+  vpc_name = "vpc-${var.org}-${var.purpose}-${var.env}"
+  # e.g. "vpc-obk-main-example"
+}
+```
+
+**Authoritative pattern table**: See `contracts/naming-policy.md`.

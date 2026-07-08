@@ -2,7 +2,7 @@
 
 **Feature**: 001-upgrade-providers-modules
 **Date**: 2026-07-07
-**Updated**: 2026-07-07 (post-clarification — all version targets revised to match upstream repositories)
+**Updated**: 2026-07-08 (added section 6 — naming convention and label policy from US5 clarification)
 
 ---
 
@@ -220,3 +220,129 @@ upstream module versions, these strings must also be updated.
 
 *Note: Exact versions should be verified against the GitHub releases at implementation
 time. The values above are best estimates based on known release cadence.*
+
+---
+
+## 6. GCP Resource Naming Convention & Label Policy (US5)
+
+*Added 2026-07-08 following clarification session.*
+
+### Decision: All naming tokens are Terraform variables (no hardcoded org/env strings)
+
+**Rationale**: Modules must be reusable across organisations and environments without
+code changes. Embedding an org token (e.g. `obk`) into a resource name in HCL means
+every fork of the module must find-and-replace the org string. Variable-driven tokens
+let the caller supply context at `terraform apply` time via `tfvars`.
+
+**Alternatives considered**:
+- Hardcode `obk` as the org token everywhere: Simple but prevents multi-org reuse;
+  rejected per user clarification (2026-07-08).
+- Use a `locals {}` org constant per stack: Slightly better but still requires code
+  change per org; rejected in favour of a `var.org` input.
+
+---
+
+### Decision: `common_labels` at stack level; modules accept a `labels` input variable
+
+**Rationale**: Defining `common_labels` once per stack ensures label consistency
+without duplicating the 10-key map inside each module. Modules stay thin — they
+receive `var.labels` and merge it: `labels = merge(var.labels, { component = "vpc" })`.
+This pattern lets the stack override or extend labels without touching module internals.
+
+**`common_labels` structure** (all values from stack variables except constants):
+
+```hcl
+locals {
+  common_labels = {
+    org          = var.org           # e.g. "obk"
+    landing_zone = "gcp_lz"         # constant
+    env          = var.env           # shd | prd | np | sbx
+    domain       = var.domain        # platform | connectivity | data | ml | sandbox
+    app          = var.app           # workload identifier
+    component    = var.component     # vpc | subnet | bq | gcs | dataproc | vertex
+    owner_team   = var.owner_team    # netops | secops | data_platform | ml_platform
+    cost_center  = var.cost_center   # free-form billing code
+    managed_by   = "terraform"       # constant — never a variable
+    data_class   = var.data_class    # public | internal | confidential | restricted | na
+  }
+}
+```
+
+**Alternatives considered**:
+- Each module defines its own `common_labels` internal local: Labels would differ
+  between modules if the caller forgets to align values. Rejected.
+- No module `labels` variable, caller sets labels via `provider_default_labels`:
+  Provider-level default labels are a GCP feature, not supported by all resource types;
+  module-level `labels` argument is the portable approach.
+
+---
+
+### Decision: Validate `env` and `data_class` only; other tokens are free-form
+
+**Rationale**: `env` and `data_class` are high-stakes enumerations — wrong values
+cause cost misattribution (`env`) or compliance failures (`data_class`). The other
+tokens (`domain`, `owner_team`, `app`, `component`) are team-defined strings that
+vary per project and would require constant maintenance of the validation allowlist.
+
+**Validated enumerations**:
+
+| Variable | Allowed values |
+|---|---|
+| `env` | `shd`, `prd`, `np`, `sbx` |
+| `data_class` | `public`, `internal`, `confidential`, `restricted`, `na` |
+
+**Implementation**: `validation {}` block inside each stack's `variables.tf`:
+
+```hcl
+variable "env" {
+  type        = string
+  description = "Deployment environment. Controls resource naming and label value."
+  validation {
+    condition     = contains(["shd", "prd", "np", "sbx"], var.env)
+    error_message = "env must be one of: shd, prd, np, sbx."
+  }
+}
+```
+
+---
+
+### Decision: `terraform state mv` for all resource renames; document sequences in contracts
+
+**Rationale**: Renaming a Terraform resource block (e.g. `google_compute_network.main`
+→ `google_compute_network.vpc`) without a corresponding `terraform state mv` causes
+Terraform to plan destroy+create, which in a real environment deletes the resource.
+In `stacks/example/` this is acceptable for non-persistent resources, but documenting
+the state mv sequence in `contracts/state-migration.md` enables zero-destruction renames
+for any team that has applied the stack.
+
+**State mv pattern**:
+```bash
+terraform state mv \
+  'google_compute_network.example_main_vpc' \
+  'google_compute_network.vpc'
+```
+
+**Alternatives considered**:
+- `moved {}` blocks in HCL (Terraform 1.1+): Cleaner than CLI commands and
+  self-documenting in code. Will be used where the resource type supports it.
+  `terraform state mv` is the fallback for resource types that don't support `moved {}`.
+
+---
+
+### Naming pattern reference
+
+Full 30-resource-type table documented in `contracts/naming-policy.md`.
+
+**Key patterns for resources present in this project**:
+
+| Resource in project | Pattern | Example (example stack) |
+|---|---|---|
+| VPC | `vpc-<org>-<purpose>-<env>` | `vpc-obk-main-example` |
+| Subnet | `snet-<org>-<domain>-<env>-<region>` | `snet-obk-platform-example-th` |
+| Cloud NAT | `nat-<org>-<domain>-<purpose>-<env>-<region>-nn` | `nat-obk-con-egress-example-th-01` |
+| Cloud Router | `cr-<org>-<domain>-<purpose>-<env>-<region>-nn` | `cr-obk-con-nat-example-th-01` |
+| HA VPN Gateway | `havgw-<org>-<peer>-<env>-<region>-nn` | `havgw-obk-onprem-example-th-01` |
+| VPN Tunnel | `vpntun-<org>-<peer>-<env>-<region>-a/b` | `vpntun-obk-onprem-example-th-a` |
+| Firewall rule | `fwr-<action>-<src>-to-<dst>-<service>` | `fwr-allow-platform-example-to-gke-443` |
+| Artifact Registry | `ar-<org>-<domain>-<artifact>-<env>-<region>` | `ar-obk-platform-docker-example-sg` |
+| Cloud SQL instance | `sql-<org>-<domain>-<engine>-<env>-<region>` | `sql-obk-platform-pg-example-sg` |

@@ -19,6 +19,7 @@ resource "google_compute_router" "router" {
   project = var.project_id
   region  = var.region
   network = var.network_name
+  # google_compute_router does not support labels; variable declared for interface consistency
 
   dynamic "bgp" {
     for_each = var.router_asn != null ? [{

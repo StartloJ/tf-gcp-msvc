@@ -8,6 +8,7 @@ variables {
   router                             = "test-router"
   create_router                      = true
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+  labels                             = { managed_by = "terraform" }
 }
 
 run "plan_cloud_nat_with_auto_router" {
@@ -26,6 +27,11 @@ run "plan_cloud_nat_with_auto_router" {
   assert {
     condition     = var.create_router == true
     error_message = "create_router should be true"
+  }
+
+  assert {
+    condition     = var.labels["managed_by"] == "terraform"
+    error_message = "labels variable not passed correctly (google_compute_router does not support labels attribute)"
   }
 }
 

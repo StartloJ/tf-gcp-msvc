@@ -165,6 +165,63 @@ deprecated attributes from the v32 → v44 GKE module upgrade.
 
 ---
 
+---
+
+## Step 8: Verify Naming Convention and Label Policy (US5)
+
+### 8a — No old-pattern resource names remain
+
+```bash
+# Should return no output — no resources using old example-* prefix
+grep -rn 'name\s*=\s*"example-' stacks/ --include="*.tf"
+
+# Should return no output — no names using legacy <env>-<component>-<type> pattern
+grep -rn '"example-main-vpc\|example-cloud-nat\|example-fw-' stacks/ --include="*.tf"
+```
+
+### 8b — Every stack defines common_labels with managed_by = "terraform"
+
+```bash
+grep -rn 'managed_by' stacks/ --include="*.tf"
+# Expected: at least one match per stack directory showing managed_by = "terraform"
+
+grep -rn 'common_labels' stacks/ --include="*.tf"
+# Expected: definition in locals.tf and references in main.tf per stack
+```
+
+### 8c — Every module declares a labels variable
+
+```bash
+for d in modules/networks/* modules/sql/* modules/workload/*; do
+  if [ -f "$d/variables.tf" ]; then
+    grep -q 'variable "labels"' "$d/variables.tf" \
+      && echo "OK: $d" \
+      || echo "MISSING: $d"
+  fi
+done
+# Expected: all lines print "OK: <module>"
+```
+
+### 8d — Label validation blocks exist in stack variables.tf
+
+```bash
+grep -A5 'variable "env"' stacks/example/variables.tf | grep -q 'validation' \
+  && echo "env validation OK" || echo "MISSING env validation"
+
+grep -A5 'variable "data_class"' stacks/example/variables.tf | grep -q 'validation' \
+  && echo "data_class validation OK" || echo "MISSING data_class validation"
+```
+
+### 8e — State migration: zero destroy after renames
+
+```bash
+terraform -chdir=stacks/example plan -no-color 2>&1 | grep "^Plan:"
+# Expected: Plan: N to add, M to change, 0 to destroy.
+# (N/M may be >0 from other tasks; destroy count MUST be 0 for renamed resources)
+```
+
+---
+
 ## Validation Summary
 
 | Step | Command | Expected outcome |
@@ -176,3 +233,8 @@ deprecated attributes from the v32 → v44 GKE module upgrade.
 | 5 | `./tests/run-integration-tests.sh` | All integration tests passed |
 | 6 | `pre-commit run --all-files` | All hooks pass |
 | 7 | `terraform plan` on stack (optional) | No deprecated-attribute errors |
+| 8a | `grep` old resource name patterns | No matches |
+| 8b | `grep` common_labels + managed_by | Present in every stack |
+| 8c | `labels` variable per module | All modules print "OK" |
+| 8d | `validation {}` grep for env/data_class | Both return "OK" |
+| 8e | `terraform plan` destroy count | 0 destroys for renamed resources |

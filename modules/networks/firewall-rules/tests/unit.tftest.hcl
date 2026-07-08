@@ -3,6 +3,7 @@ mock_provider "google" {}
 variables {
   project_id   = "test-project"
   network_name = "test-network"
+  labels       = { managed_by = "terraform" }
   ingress_rules = [
     {
       name          = "allow-http"

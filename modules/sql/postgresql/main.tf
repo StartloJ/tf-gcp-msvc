@@ -158,7 +158,7 @@ resource "google_sql_database_instance" "default" {
       }
     }
 
-    user_labels = var.user_labels
+    user_labels = merge(var.labels, { component = "sql" })
 
     dynamic "location_preference" {
       for_each = var.zone != null ? ["location_preference"] : []

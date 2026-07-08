@@ -54,3 +54,67 @@ variable "network_admin_members" {
   #   "serviceAccount:terraform@my-host-project.iam.gserviceaccount.com",
   # ]
 }
+
+# ---------------------------------------------------------------------------
+# Naming token and label variables (US5 — naming convention & label policy)
+# ---------------------------------------------------------------------------
+
+variable "org" {
+  type        = string
+  description = "Organisation abbreviation used in resource naming (e.g. 'obk')."
+}
+
+variable "domain" {
+  type        = string
+  description = "Business domain (e.g. 'platform', 'connectivity')."
+}
+
+variable "env" {
+  type        = string
+  description = "Deployment environment. Controls resource naming and label value."
+  validation {
+    condition     = contains(["shd", "prd", "np", "sbx"], var.env)
+    error_message = "env must be one of: shd, prd, np, sbx."
+  }
+}
+
+variable "region_code" {
+  type        = string
+  description = "Short region code used in resource names (e.g. 'sg' = asia-southeast1)."
+}
+
+variable "purpose" {
+  type        = string
+  description = "Workload-specific descriptor used in VPC names (e.g. 'shared', 'lz')."
+  default     = "shared"
+}
+
+variable "app" {
+  type        = string
+  description = "Application or workload identifier for the common_labels map."
+}
+
+variable "component" {
+  type        = string
+  description = "Component identifier for the common_labels map."
+  default     = "shared-vpc"
+}
+
+variable "owner_team" {
+  type        = string
+  description = "Owning team for cost attribution and incident routing."
+}
+
+variable "cost_center" {
+  type        = string
+  description = "Billing cost-center code applied as a label to all resources."
+}
+
+variable "data_class" {
+  type        = string
+  description = "Data classification level applied as a label to all resources."
+  validation {
+    condition     = contains(["public", "internal", "confidential", "restricted", "na"], var.data_class)
+    error_message = "data_class must be one of: public, internal, confidential, restricted, na."
+  }
+}

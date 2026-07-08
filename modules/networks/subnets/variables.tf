@@ -46,3 +46,11 @@ variable "subnet_users" {
     error_message = "subnet_users must not contain empty member strings."
   }
 }
+
+# tflint-ignore: terraform_unused_declarations
+variable "labels" {
+  type        = map(string)
+  description = "Labels to apply to all resources managed by this module."
+  default     = {}
+}
+

@@ -13,12 +13,25 @@ Tests (`.tftest.hcl`) are written BEFORE implementation within each user story p
 
 **Organization**: Tasks grouped by user story. US1 (P1) can begin after Foundational phase.
 US2, US3, US4 can proceed in parallel after US1 is checkpointed (all are independent).
+US5 (naming convention + label policy) added 2026-07-08 — tasks T050–T080.
 
 ## Format: `[ID] [P?] [Story?] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies on incomplete tasks in same phase)
 - **[Story]**: Which user story this task belongs to (US1–US4)
 - Every task includes a **Verify** line — the check that MUST pass before marking done
+
+## Naming & Label Policy Reference (from spec clarifications 2026-07-08)
+
+| Item | Value |
+|---|---|
+| Naming token source | All tokens (`<org>`, `<domain>`, `<env>`, `<region>`, `<purpose>`) are Terraform variables |
+| Label strategy | Stack-level `common_labels` local (10 keys) → passed as `labels = local.common_labels` to every module |
+| Module interface | Every module declares `variable "labels" { type = map(string); default = {} }` |
+| Merge pattern | `labels = merge(var.labels, { component = "<resource-type>" })` per resource |
+| Validated enums | `env`: shd\|prd\|np\|sbx · `data_class`: public\|internal\|confidential\|restricted\|na |
+| Rename strategy | `moved {}` blocks in `stacks/example/moved.tf` preferred over `terraform state mv` |
+| Authority | `contracts/naming-policy.md` + `contracts/state-migration.md` |
 
 ## Target Version Reference (from spec clarifications 2026-07-07)
 
@@ -284,6 +297,137 @@ Integration test against floci stack exits 0.
 
 ---
 
+---
+
+## Phase 8: User Story 5 — Resource Naming Convention & Label Policy (Priority: P2)
+
+**Goal**: All GCP resources across every module and both example stacks use variable-driven
+naming patterns (e.g. `vpc-${var.org}-${var.purpose}-${var.env}`). Every module exposes a
+`labels` input variable. Each stack defines a `common_labels` local (10 keys) and passes it
+to every module. `env` and `data_class` are validated. Existing resources in `stacks/example/`
+renamed via `moved {}` blocks with 0 destroys in plan.
+
+**Independent Test**: Compliance grep commands in `contracts/naming-policy.md` all return
+empty. `terraform plan` in `stacks/example/` shows 0 destroys. All module unit tests pass.
+All stack unit tests pass.
+
+### Tests for User Story 5 ⚠️ Update BEFORE adding labels implementation
+
+- [X] T050 [P] [US5] Update `modules/networks/vpc/tests/unit.tftest.hcl` — add an `assert` block to the existing `plan_vpc_basic` run that checks `google_compute_network.network.labels["managed_by"] == "terraform"` (will fail until T059 adds the merge); set test variable `labels = { managed_by = "terraform" }`
+  - **Verify**: `terraform -chdir=modules/networks/vpc test` fails with assertion error before T059; passes after T059
+
+- [X] T051 [P] [US5] Update `modules/networks/subnets/tests/unit.tftest.hcl` — add labels assert checking `google_compute_subnetwork.subnetwork[*].labels["managed_by"]` equals `"terraform"` in an existing or new run block
+  - **Verify**: Test fails before T060; passes after T060
+
+- [X] T052 [P] [US5] Update `modules/networks/firewall-rules/tests/unit.tftest.hcl` — add labels assert (firewall rules do not carry labels; assert `var.labels` accepted without error by adding `labels = { managed_by = "terraform" }` to variables block and confirming plan exits 0)
+  - **Verify**: Test passes before and after — confirms labels variable accepted even if resource doesn't use it
+
+- [X] T053 [P] [US5] Update `modules/networks/router-nat/tests/unit.tftest.hcl` — add `labels = { managed_by = "terraform" }` to variables block; assert `google_compute_router.router.labels["managed_by"] == "terraform"`
+  - **Verify**: Test fails before T063; passes after T063
+
+- [X] T054 [P] [US5] Update `modules/networks/vpn-classic/tests/unit.tftest.hcl` — add `labels = { managed_by = "terraform" }` to variables; assert labels accepted without plan error
+  - **Verify**: Test passes after T064 adds the variable
+
+- [X] T055 [P] [US5] Update `modules/networks/vpn-ha/tests/unit.tftest.hcl` — add `labels = { managed_by = "terraform" }` to variables; assert labels accepted
+  - **Verify**: Test passes after T065 adds the variable
+
+- [X] T056 [P] [US5] Update `modules/sql/postgresql/tests/unit.tftest.hcl` — add `labels = { managed_by = "terraform" }` to variables; assert `google_sql_database_instance.default.settings[0].user_labels["managed_by"] == "terraform"`
+  - **Verify**: Test fails before T066; passes after T066
+
+- [X] T057 [P] [US5] Update `modules/workload/artifact-registry/tests/unit.tftest.hcl` — add `labels = { managed_by = "terraform" }` to variables; assert `google_artifact_registry_repository.repo.labels["managed_by"] == "terraform"`
+  - **Verify**: Test fails before T067; passes after T067
+
+- [X] T058 [P] [US5] Update `modules/networks/routes/tests/unit.tftest.hcl` — add `labels = { managed_by = "terraform" }` to variables; assert labels accepted (routes resource does not carry labels; confirm plan exits 0)
+  - **Verify**: Test passes after T062 adds the variable
+
+### Implementation — Module labels variable (all parallel, no inter-module dependencies)
+
+- [X] T059 [P] [US5] Add `labels` variable to `modules/networks/vpc/variables.tf` (type `map(string)`, default `{}`, description per naming-policy contract) and update `modules/networks/vpc/main.tf` — merge `var.labels` into `google_compute_network.network` and `google_compute_shared_vpc_host_project` resources: `labels = merge(var.labels, { component = "vpc" })`
+  - **Verify**: `terraform -chdir=modules/networks/vpc test` exits 0 with all assertions passing (including T050 label assert)
+
+- [X] T060 [P] [US5] Add `labels` variable to `modules/networks/subnets/variables.tf` and update `modules/networks/subnets/main.tf` — merge `var.labels` into `google_compute_subnetwork.subnetwork` resources
+  - **Verify**: `terraform -chdir=modules/networks/subnets test` exits 0 with T051 label assert passing
+
+- [X] T061 [P] [US5] Add `labels` variable to `modules/networks/firewall-rules/variables.tf` (firewall rules resource does not support labels — declare variable for interface consistency; do not add to resource)
+  - **Verify**: `terraform -chdir=modules/networks/firewall-rules test` exits 0; `grep "variable.*labels" modules/networks/firewall-rules/variables.tf` returns a match
+
+- [X] T062 [P] [US5] Add `labels` variable to `modules/networks/routes/variables.tf` (routes resource does not support labels — declare for interface consistency)
+  - **Verify**: `terraform -chdir=modules/networks/routes test` exits 0; variable declared in variables.tf
+
+- [X] T063 [P] [US5] Add `labels` variable to `modules/networks/router-nat/variables.tf` and update `modules/networks/router-nat/main.tf` — merge `var.labels` into `google_compute_router.router` resource
+  - **Verify**: `terraform -chdir=modules/networks/router-nat test` exits 0 with T053 label assert passing
+
+- [X] T064 [P] [US5] Add `labels` variable to `modules/networks/vpn-classic/variables.tf` (VPN gateway and tunnel resources do not support labels — declare for interface consistency)
+  - **Verify**: `terraform -chdir=modules/networks/vpn-classic test` exits 0; variable declared
+
+- [X] T065 [P] [US5] Add `labels` variable to `modules/networks/vpn-ha/variables.tf` (HA VPN resources do not support labels — declare for interface consistency)
+  - **Verify**: `terraform -chdir=modules/networks/vpn-ha test` exits 0; variable declared
+
+- [X] T066 [P] [US5] Add `labels` variable to `modules/sql/postgresql/variables.tf` and update `modules/sql/postgresql/main.tf` — merge `var.labels` into `google_sql_database_instance.default` via `settings[0].user_labels = merge(var.labels, { component = "sql" })`
+  - **Verify**: `terraform -chdir=modules/sql/postgresql test` exits 0 with T056 label assert passing
+
+- [X] T067 [P] [US5] Add `labels` variable to `modules/workload/artifact-registry/variables.tf` and update `modules/workload/artifact-registry/main.tf` — merge `var.labels` into `google_artifact_registry_repository.repo`
+  - **Verify**: `terraform -chdir=modules/workload/artifact-registry test` exits 0 with T057 label assert passing
+
+### Implementation — Stack: stacks/example/
+
+- [X] T068 [US5] Add naming token and label variables to `stacks/example/variables.tf`: `org` (string), `domain` (string), `region_code` (string, **no default** — must be supplied explicitly; existing stack uses `asia-southeast1` so callers set `region_code = "sg"`), `purpose` (string, default `"main"`), `app` (string), `component` (string, default `"stack"`), `owner_team` (string), `cost_center` (string), `data_class` (string), `artifact_type` (string, default `"docker"` — AR repository format), `db_engine` (string, default `"pg"` — Cloud SQL engine short code). Add `validation {}` blocks for `env` (shd|prd|np|sbx) and `data_class` (public|internal|confidential|restricted|na). (Depends on T059–T067 complete so variable interface is stable.)
+  - **Verify**: `terraform -chdir=stacks/example validate` exits 0; `grep "validation" stacks/example/variables.tf | wc -l` returns 2; `grep "region_code" stacks/example/variables.tf` shows variable with **no default** line
+
+- [X] T069 [US5] Create `stacks/example/locals.tf` with `common_labels` local block using all 10 keys (see `contracts/naming-policy.md` for exact structure). Include naming locals for every resource in the stack — at minimum: `vpc_name = "vpc-${var.org}-${var.purpose}-${var.env}"`, `subnet_name = "snet-${var.org}-${var.domain}-${var.env}-${var.region_code}"`, `nat_name = "nat-${var.org}-${var.domain}-egress-${var.env}-${var.region_code}-01"`, `router_name = "cr-${var.org}-${var.domain}-nat-${var.env}-${var.region_code}-01"`, `sql_name = "sql-${var.org}-${var.domain}-${var.db_engine}-${var.env}-${var.region_code}"`, `ar_name = "ar-${var.org}-${var.domain}-${var.artifact_type}-${var.env}-${var.region_code}"`. (Depends on T068.)
+  - **Verify**: `terraform -chdir=stacks/example validate` exits 0; `grep "common_labels" stacks/example/locals.tf` returns definition block; `grep "sql_name\|ar_name" stacks/example/locals.tf` returns both lines
+
+- [X] T070 [US5] Update all module call blocks in `stacks/example/*.tf` to add `labels = local.common_labels`; update resource `name` arguments to reference naming locals from T069 per this mapping: `module.vpc → network_name = local.vpc_name`; `module.subnets → subnets[].subnet_name = local.subnet_name` (or equivalent); `module.router_nat → name = local.nat_name / router_name = local.router_name`; `module.cloud_sql_pg → name = local.sql_name`; `module.artifact_registry → repository_id = local.ar_name`. (Depends on T069.)
+  - **Verify**: `grep 'labels\s*=\s*local.common_labels' stacks/example/*.tf | wc -l` equals the number of module blocks; `grep 'local\.sql_name\|local\.ar_name' stacks/example/*.tf` returns ≥1 line each; `terraform -chdir=stacks/example validate` exits 0
+
+- [X] T071 [US5] Create `stacks/example/moved.tf` with `moved {}` blocks for all direct resource renames identified in `contracts/state-migration.md`. For any resource type where `moved {}` is insufficient, run `terraform -chdir=stacks/example state mv <old> <new>` and document the command in the PR. (Depends on T070.)
+  - **Verify**: `terraform -chdir=stacks/example plan -no-color 2>&1 | grep "^Plan:"` shows `0 to destroy`; `grep -c "^moved {" stacks/example/moved.tf` equals the count of renamed direct resources
+
+### Implementation — Stack: stacks/example_vpc_shared/
+
+- [X] T072 [P] [US5] Add naming token and label variables to `stacks/example_vpc_shared/variables.tf`: same set as T068 plus any shared-VPC-specific tokens. Add `validation {}` blocks for `env` and `data_class`.
+  - **Verify**: `terraform -chdir=stacks/example_vpc_shared validate` exits 0; 2 `validation {}` blocks present
+
+- [X] T073 [P] [US5] Create `stacks/example_vpc_shared/locals.tf` with `common_labels` local and naming locals for VPC (`vpc-${var.org}-${var.purpose}-${var.env}`), subnets (`snet-${var.org}-${var.domain}-${var.env}-${var.region_code}`). (Depends on T072.)
+  - **Verify**: `terraform -chdir=stacks/example_vpc_shared validate` exits 0; `grep "common_labels" stacks/example_vpc_shared/locals.tf` returns definition
+
+- [X] T074 [P] [US5] Update module calls in `stacks/example_vpc_shared/main.tf` — pass `labels = local.common_labels` to `module.shared_vpc` and `module.shared_subnets`; update `network_name` and subnet `subnet_name` inputs to reference naming locals from T073. (Depends on T073.)
+  - **Verify**: `grep 'labels\s*=\s*local.common_labels' stacks/example_vpc_shared/main.tf | wc -l` returns ≥ 2; `terraform -chdir=stacks/example_vpc_shared validate` exits 0
+
+- [X] T074a [P] [US5] Update `stacks/example_vpc_shared/tests/unit.tftest.hcl` — add a `variables {}` block to each `run {}` supplying `labels = { managed_by = "terraform", env = "shd" }`; add an `assert` in the `plan_shared_vpc_full` run verifying the VPC module received a non-empty labels input (e.g. `assert { condition = module.shared_vpc.network_name != "" }` — or assert on output map if accessible). (Depends on T074.)
+  - **Verify**: `terraform -chdir=stacks/example_vpc_shared test -no-color` exits 0 (all 3 unit test runs pass); `grep "labels" stacks/example_vpc_shared/tests/unit.tftest.hcl` returns ≥ 1 line
+
+### Validation
+
+- [X] T075 [US5] Run all 9 module unit tests with labels assertions: `./tests/run-unit-tests.sh` (depends on T059–T067 complete)
+  - **Verify**: Script exits 0; each module reports `0 assertions failed`; labels assertions in T050–T058 are among the passing assertions
+
+- [X] T076 [US5] Run `terraform -chdir=stacks/example plan -no-color` and confirm 0 destroys after resource renames (depends on T071 complete; run `terraform init` first if needed)
+  - **Verify**: Plan output line matching `^Plan:` contains `0 to destroy`
+
+- [X] T077 [US5] Run `terraform -chdir=stacks/example test -no-color` to confirm stack unit tests still pass with updated variables and common_labels (depends on T070)
+  - **Verify**: `0 assertions failed`
+
+- [X] T078 [US5] Run naming convention compliance checks from `contracts/naming-policy.md` acceptance test section:
+  ```bash
+  grep -rn 'name.*=.*"example-' stacks/ --include="*.tf"        # must return nothing
+  grep -rn 'managed_by' stacks/ --include="*.tf"                 # must show entry per stack
+  for d in modules/networks/* modules/sql/* modules/workload/*; do
+    grep -q 'variable "labels"' "$d/variables.tf" 2>/dev/null \
+      && echo "OK: $d" || echo "MISSING: $d"; done               # all must print OK
+  ```
+  - **Verify**: All three commands return expected output (empty / match / all OK)
+
+- [X] T079 [US5] Run `pre-commit run --all-files` to confirm `terraform-fmt`, `tflint`, and `terraform-docs-go` pass after all US5 changes (depends on T059–T078 complete)
+  - **Verify**: `pre-commit run --all-files` exits 0; `terraform-docs-go` regenerates README.md for all 9 modules that gained the `labels` variable
+
+- [X] T080 [US5] Run quickstart Step 8 validation commands from `specs/001-upgrade-providers-modules/quickstart.md` (Steps 8a–8e) end-to-end
+  - **Verify**: All 5 sub-checks (8a–8e) produce expected output; `terraform plan` destroy count is 0
+
+**Checkpoint**: All resources renamed, labels policy applied across all modules and stacks, compliance checks pass, 0 destroys confirmed, pre-commit green.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -298,10 +442,11 @@ Integration test against floci stack exits 0.
 
 ### User Story Dependencies
 
-- **US1 (P1)**: Starts after Phase 1 — independent
-- **US2 (P2)**: Audit tasks (T045/T046) start after Phase 1; HCL fix tasks (T047/T048) depend on audit; floci test (T049) depends on Phase 2 + fixes
-- **US3 (P3)**: Starts after Phase 1 — independent (can run in parallel with US1/US2)
-- **US4 (P3)**: Integration tests (T034, T039) depend on Foundational phase (floci stack)
+- **US1 (P1)**: Starts after Phase 1 — independent ✅ complete
+- **US2 (P2)**: Audit tasks (T045/T046) start after Phase 1; HCL fix tasks depend on audit; floci test depends on Phase 2 + fixes ✅ complete
+- **US3 (P3)**: Starts after Phase 1 — independent ✅ complete
+- **US4 (P3)**: Integration tests depend on Foundational phase (floci stack) ✅ complete
+- **US5 (P2)**: T050–T058 (test updates) start immediately in parallel; T059–T067 (module labels) follow T050–T058; T068–T071 (stacks/example) depend on T059–T067; T072–T074a (stacks/example_vpc_shared) independent of example stack, parallel with T068–T071; T075–T080 (validation) depend on all implementation tasks
 
 ### Within Each User Story
 
@@ -379,5 +524,10 @@ terraform -chdir=modules/workload/artifact-registry test # T015
 - T045/T046 (changelog audits) are research tasks — findings go in PR description or inline notes
 - Integration tests (T034, T039, T049) require Docker and the floci services stack running
 - `provider_meta.module_name` version strings in T016–T024 should be verified against upstream GitHub releases at implementation time; update if actual upstream versions differ
-- Do NOT manually edit `modules/*/README.md` — these are managed by `terraform-docs` (T040)
+- Do NOT manually edit `modules/*/README.md` — these are managed by `terraform-docs` (T040, T079)
 - T041 MUST execute before T040 (terraform-docs version config before running terraform-docs)
+- US5 notes: T050–T058 intentionally write failing test assertions BEFORE T059–T067 add the implementation — run each module test twice (before and after adding labels)
+- For modules where the GCP resource type does not support `labels` (firewall-rules, routes, vpn-classic, vpn-ha): declare the variable for interface consistency but do NOT add to the resource block; note this explicitly in the PR
+- Cloud SQL uses `settings[0].user_labels` not `labels` at the resource top-level — see T066
+- The `moved {}` block approach in T071 is preferred; if a resource type gives an error with `moved {}` use `terraform state mv` and record the command in the PR description per `contracts/state-migration.md`
+- `stacks/example_vpc_shared` tasks (T072–T074a) can run in parallel with `stacks/example` tasks (T068–T071) since they are independent stacks

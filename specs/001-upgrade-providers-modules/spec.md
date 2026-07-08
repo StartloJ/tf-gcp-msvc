@@ -10,6 +10,13 @@
 
 ## Clarifications
 
+### Session 2026-07-08
+
+- Q: Should existing resources in `stacks/example/` be renamed to the new naming convention, or apply forward-only? → A: Rename existing resources now; use `terraform state mv` where possible to avoid destroy/re-create.
+- Q: Should org, domain, env, and other naming tokens be hardcoded or variable-driven? → A: All tokens (`<org>`, `<domain>`, `<env>`, `<region>`, etc.) are Terraform variables — no hardcoded values; fully portable across orgs and environments.
+- Q: Should `common_labels` and label variables live at stack level only or also inside modules? → A: Stack-level `locals { common_labels = {...} }` constructed from stack variables; each module accepts a single `labels` input variable (type `map(string)`) that it merges into every managed resource.
+- Q: Should validation blocks enforce label enum values? → A: Validate `env` (shd | prd | np | sbx) and `data_class` (public | internal | confidential | restricted | na) in each stack's `variables.tf` using `validation {}` blocks.
+
 ### Session 2026-07-07
 
 - Q: For kubernetes (latest 3.2.1) and helm (latest 3.2.0), which are major-version jumps from the pinned 2.32.0/2.15.0, should we upgrade to v3 or stay on v2? → A: Upgrade to `~> 3.2` for both; breaking HCL changes fixed as part of this task; validate availability via floci local services stack.
@@ -139,9 +146,59 @@ integration test confirms the plan completes successfully.
 
 ---
 
-### Edge Cases
+### User Story 5 - Standardise Resource Naming and Label Policy (Priority: P2)
 
-- What happens when a module's minimum provider version is set higher than the stack's
+As an infrastructure engineer, I need all GCP resources across every module and stack to
+follow the org-wide naming convention and carry the `common_labels` policy so that
+resources are consistently identifiable, cost-attributed, and auditable regardless of
+which organisation or environment they are deployed into.
+
+**Why this priority**: Ad-hoc resource names (`example-main-vpc`, `snet-example-gke-private`)
+are environment-specific strings that break when the same module is reused in a different
+org or domain. Standardised variable-driven names and labels are a prerequisite for
+multi-org reuse, cost allocation, and compliance auditing.
+
+**Independent Test**: After changes, every resource `name` attribute in `stacks/example/`
+matches one of the policy patterns; `terraform plan` shows zero resource destructions
+(all renames resolved via `terraform state mv`); every stack directory contains a
+`common_labels` local with all 10 required keys; every module's `variables.tf` declares
+a `labels` input variable.
+
+**Acceptance Scenarios**:
+
+1. **Given** updated resource names in `stacks/example/`, **When** `terraform plan` runs,
+   **Then** the plan shows zero resources to destroy and zero to create for renamed
+   resources (state migration complete via `terraform state mv`).
+2. **Given** any stack directory, **When** its locals block is read, **Then** a
+   `common_labels` local exists containing all 10 required keys: `org`, `landing_zone`,
+   `env`, `domain`, `app`, `component`, `owner_team`, `cost_center`, `managed_by`,
+   `data_class`; `managed_by` equals `"terraform"`.
+3. **Given** any module's `variables.tf`, **When** read, **Then** a `labels` variable
+   of type `map(string)` with default `{}` is declared.
+4. **Given** a stack `variables.tf`, **When** `env` is set to an invalid value (e.g.
+   `"production"`), **Then** `terraform validate` returns an error citing the allowed
+   values `shd`, `prd`, `np`, `sbx`.
+5. **Given** a stack `variables.tf`, **When** `data_class` is set to an invalid value,
+   **Then** `terraform validate` returns an error citing the allowed values `public`,
+   `internal`, `confidential`, `restricted`, `na`.
+
+---
+
+### Edge Cases (Naming & Labels)
+
+- What if a renamed resource cannot be migrated via `terraform state mv` (e.g. a resource
+  type that does not support in-place ID changes)? The rename is still required; a
+  controlled destroy/re-create is acceptable in `stacks/example/` since it is a
+  non-production stack, but must be documented in the PR description.
+- What if two resources within the same module produce the same name under the pattern
+  (e.g. two subnets in the same region with the same domain)? The caller is responsible
+  for making tokens unique; modules MUST NOT silently append a numeric suffix unless the
+  pattern explicitly includes `nn`.
+- What if a GCP resource type has a character limit shorter than the generated name?
+  The pattern must be applied; if truncation is unavoidable, abbreviate the `<purpose>`
+  or `<domain>` token and document the abbreviation in the stack's `locals.tf`.
+
+### Edge Cases (Provider Upgrade) is set higher than the stack's
   minimum? The stack constraint must match or exceed `>= 7.10` to avoid resolution
   conflicts with the GKE v44.x module dependency.
 - What if the GKE module v32→v44 jump introduces breaking variable or output changes
@@ -188,6 +245,24 @@ integration test confirms the plan completes successfully.
 - **FR-011**: Availability of the updated kubernetes, helm, and GKE module configurations
   MUST be validated using the floci local services stack (docker-compose emulator) before
   marking the respective user stories complete.
+- **FR-012**: All resource `name` attributes in `stacks/example/` and in module examples
+  MUST be updated to match the org-wide naming patterns (see Key Entities below). Every
+  token (`<org>`, `<domain>`, `<env>`, `<region>`, `<purpose>`, etc.) MUST be sourced
+  from a Terraform variable — no hardcoded string literals in resource names.
+- **FR-013**: Each stack MUST define a `common_labels` local block containing exactly the
+  10 required keys: `org`, `landing_zone`, `env`, `domain`, `app`, `component`,
+  `owner_team`, `cost_center`, `managed_by`, `data_class`. `org` and `managed_by` are
+  stack-level constants; all other keys MUST reference stack input variables.
+- **FR-014**: Every module MUST declare a `labels` input variable (`type = map(string)`,
+  `default = {}`) and merge it into every managed GCP resource's `labels` argument so
+  the caller can inject `common_labels` without modifying module internals.
+- **FR-015**: Each stack's `variables.tf` MUST include `validation {}` blocks for `env`
+  (allowed values: `shd`, `prd`, `np`, `sbx`) and `data_class` (allowed values:
+  `public`, `internal`, `confidential`, `restricted`, `na`).
+- **FR-016**: All resource renames MUST be executed via `terraform state mv` where the
+  resource type supports it, so that `terraform plan` shows zero destructions after
+  migration. Where state mv is not possible, a controlled destroy/re-create is acceptable
+  in `stacks/example/` and MUST be documented in the PR.
 
 ### Key Entities
 
@@ -201,6 +276,18 @@ integration test confirms the plan completes successfully.
   change.
 - **GKE module reference**: The `version` attribute inside a `module` block in a stack
   `.tf` file pointing to the Terraform Registry. Target: `~> 44.0`.
+- **Resource naming tokens**: Variable-driven segments used in every resource name:
+  `<org>` = `var.org`, `<domain>` = `var.domain`, `<env>` = `var.env`,
+  `<region>` = abbreviated region code (e.g. `th` for asia-southeast2, `sg` for
+  asia-southeast1), `<purpose>` = workload-specific string, `nn` = zero-padded counter
+  for resources that require a sequence number (e.g. `01`, `02`).
+- **`common_labels` local**: A map of 10 standard label keys defined in each stack's
+  `locals {}` block and passed to every module via the `labels` argument. Keys: `org`,
+  `landing_zone`, `env`, `domain`, `app`, `component`, `owner_team`, `cost_center`,
+  `managed_by` (constant `"terraform"`), `data_class`.
+- **Module `labels` variable**: A `map(string)` input declared in every module's
+  `variables.tf` (default `{}`). Merged with any resource-specific label overrides
+  inside the module using `merge(var.labels, { ... })`.
 - **Floci services stack**: The docker-compose local GCP emulator stack used to validate
   availability of updated provider and module configurations without real GCP credentials.
 
@@ -221,6 +308,19 @@ integration test confirms the plan completes successfully.
 - **SC-006**: The committed `.terraform.lock.hcl` reflects the updated provider versions
   (kubernetes 3.x, helm 3.x, google 7.x); no hash entry corresponds to the old pinned
   versions (kubernetes 2.32.0, helm 2.15.0, http 3.4.5).
+- **SC-008**: A grep across all `.tf` files in `stacks/example/` returns zero resource
+  `name` values matching the old pattern (`<env>-<component>-<type>`); all names conform
+  to the org-wide naming patterns.
+- **SC-009**: Every stack directory contains a `common_labels` local with all 10 required
+  keys; running `terraform console` and evaluating `local.common_labels` returns a map
+  with `managed_by = "terraform"` and all other keys non-empty.
+- **SC-010**: Every module's `variables.tf` declares a `labels` variable of type
+  `map(string)` with `default = {}`; a grep for `var.labels` in each module's `main.tf`
+  returns at least one `merge(var.labels, ...)` expression per resource.
+- **SC-011**: After running `terraform state mv` for all renamed resources, `terraform
+  plan` in `stacks/example/` shows zero resources to destroy and zero to create
+  (excluding intentional additions); verified via `terraform state list` diff before
+  and after migration.
 - **SC-007**: The floci services stack integration test exits 0, confirming the updated
   kubernetes, helm, and GKE module configurations plan successfully against local
   emulated endpoints.
@@ -250,3 +350,17 @@ integration test confirms the plan completes successfully.
   are not required for this validation.
 - `terraform init -upgrade` will be run in `stacks/example/` to regenerate the lock
   file; no other stacks have lock files to regenerate.
+- **Naming convention**: The org-wide naming policy is sourced from the Notion
+  TF-development page (retrieved 2026-07-08). All token values (`<org>`, `<domain>`,
+  `<env>`, `<region>`, etc.) are Terraform variables — no values are hardcoded —
+  making the modules portable across organisations and environments.
+- **Label constants**: `org` and `managed_by = "terraform"` are the only constants in
+  `common_labels`; all other label keys reference stack input variables.
+- **Validated label enums**: `env` accepts `shd`, `prd`, `np`, `sbx`; `data_class`
+  accepts `public`, `internal`, `confidential`, `restricted`, `na`. Other label keys
+  (domain, owner_team, etc.) are free-form strings validated only by code review.
+- **Region abbreviations**: `th` = asia-southeast2 (Bangkok), `sg` = asia-southeast1
+  (Singapore); additional abbreviations defined per stack as needed.
+- **Renaming scope**: All existing resource names in `stacks/example/` that do not
+  conform to the new patterns MUST be renamed as part of this feature; state migration
+  via `terraform state mv` is preferred over destroy/re-create.

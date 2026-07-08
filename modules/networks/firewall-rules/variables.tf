@@ -94,3 +94,10 @@ variable "egress_rules" {
     }))
   }))
 }
+
+# tflint-ignore: terraform_unused_declarations
+variable "labels" {
+  type        = map(string)
+  description = "Labels variable for interface consistency. google_compute_firewall does not support a labels attribute; this variable is accepted but not applied to resources."
+  default     = {}
+}

@@ -12,6 +12,7 @@ resource "google_compute_network" "network" {
   enable_ula_internal_ipv6                  = var.enable_ipv6_ula
   internal_ipv6_range                       = var.internal_ipv6_range
   network_firewall_policy_enforcement_order = var.network_firewall_policy_enforcement_order
+  # google_compute_network does not support labels; variable declared for interface consistency
 }
 
 /******************************************

@@ -19,3 +19,10 @@ variable "module_depends_on" {
   type        = list(any)
   default     = []
 }
+
+# tflint-ignore: terraform_unused_declarations
+variable "labels" {
+  type        = map(string)
+  description = "Labels variable for interface consistency. google_compute_route does not support a labels attribute; this variable is accepted but not applied to resources."
+  default     = {}
+}

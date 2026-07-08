@@ -7,7 +7,7 @@ resource "google_artifact_registry_repository" "repo" {
   project       = var.project_id
   mode          = var.mode
   description   = var.description
-  labels        = var.labels
+  labels        = merge(var.labels, { component = "artifact-registry" })
 
   kms_key_name = var.kms_key_name
 

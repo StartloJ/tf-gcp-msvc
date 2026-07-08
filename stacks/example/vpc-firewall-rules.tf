@@ -6,6 +6,7 @@ module "example_firewall" {
 
   project_id   = data.google_project.example.project_id
   network_name = module.example_main_vpc.network_name
+  labels       = local.common_labels
 
   ingress_rules = [
     {
