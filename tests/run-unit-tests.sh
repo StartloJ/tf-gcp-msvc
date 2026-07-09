@@ -14,6 +14,20 @@ MODULE_DIRS=(
   "modules/networks/vpn-ha"
   "modules/sql/postgresql"
   "modules/workload/artifact-registry"
+  "modules/data/dataproc"
+  "modules/data/bigquery"
+  "modules/storage/gcs"
+  "modules/security/secret-manager"
+  "modules/security/kms"
+  "modules/security/dlp"
+  "modules/governance/dataplex"
+  "modules/networks/psc"
+  "modules/networks/load-balancer"
+  "modules/networks/secure-web-proxy"
+  "modules/workload/cloud-run"
+  "modules/api/api-gateway"
+  "modules/api/cloud-endpoints"
+  "modules/observability/cloud-logging"
 )
 
 for dir in "${MODULE_DIRS[@]}"; do

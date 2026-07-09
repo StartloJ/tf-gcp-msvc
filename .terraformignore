@@ -1,0 +1,16 @@
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+*.tfvars
+*.tfvars.json
+.git/
+.github/
+.claude/
+.specify/
+specs/
+tests/
+*.md
+.pre-commit-config.yaml
+.tflint.hcl
+Makefile
