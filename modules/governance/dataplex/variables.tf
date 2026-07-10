@@ -24,9 +24,10 @@ variable "env" {
   description = "Environment code used in resource naming. One of: shd, prd, np, sbx."
 }
 
+# tflint-ignore: terraform_unused_declarations
 variable "region_code" {
   type        = string
-  description = "Short region code used in resource naming (e.g. sg for asia-southeast1)."
+  description = "Short region code. Kept for module interface consistency; Dataplex lake naming uses env but not region_code."
 }
 
 variable "labels" {

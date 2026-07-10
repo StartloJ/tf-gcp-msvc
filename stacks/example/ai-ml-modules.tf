@@ -4,10 +4,10 @@
 # with environment-specific values via tfvars or a data source.
 
 locals {
-  project_id  = var.org == "example" ? "example-project-id" : "REPLACE_WITH_PROJECT_ID"
-  region      = "asia-southeast1"
-  vpc_id      = "projects/${local.project_id}/global/networks/${local.vpc_name}"
-  subnet_id   = "projects/${local.project_id}/regions/${local.region}/subnetworks/${local.subnet_name}"
+  project_id = var.org == "example" ? "example-project-id" : "REPLACE_WITH_PROJECT_ID"
+  region     = "asia-southeast1"
+  vpc_id     = "projects/${local.project_id}/global/networks/${local.vpc_name}"
+  subnet_id  = "projects/${local.project_id}/regions/${local.region}/subnetworks/${local.subnet_name}"
 }
 
 # --------------------------------------------------------------------------
@@ -162,7 +162,7 @@ module "load_balancer" {
   region_code = var.region_code
   labels      = local.common_labels
 
-  load_balancer_type    = "external-global"
+  load_balancer_type      = "external-global"
   ssl_certificate_domains = ["${var.domain}.example.com"]
 
   backend_service_backends = [

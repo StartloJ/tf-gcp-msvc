@@ -68,15 +68,6 @@ variable "custom_ssl_certificate_id" {
   default     = ""
 }
 
-variable "url_map_rules" {
-  type = list(object({
-    path_prefix        = string
-    backend_service_id = string
-  }))
-  description = "List of path-based routing rules for the URL map."
-  default     = []
-}
-
 variable "health_check_path" {
   type        = string
   description = "HTTP path for the backend health check."

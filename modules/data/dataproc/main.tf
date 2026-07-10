@@ -28,8 +28,8 @@ resource "google_dataproc_cluster" "primary" {
     }
 
     gce_cluster_config {
-      subnetwork       = var.subnet_name
-      service_account  = var.service_account != "" ? var.service_account : null
+      subnetwork      = var.subnet_name
+      service_account = var.service_account != "" ? var.service_account : null
     }
 
     dynamic "initialization_action" {

@@ -1,5 +1,5 @@
 locals {
-  psc_address_name = "psc-${var.org}-${var.domain}-${var.psc_type == "google-apis" ? "googleapis" : "svc"}-${var.env}-${var.region_code}"
+  psc_address_name  = "psc-${var.org}-${var.domain}-${var.psc_type == "google-apis" ? "googleapis" : "svc"}-${var.env}-${var.region_code}"
   psc_fwd_rule_name = "psc-${var.org}-${var.domain}-${var.psc_type == "google-apis" ? "googleapis" : "svc"}-${var.env}-${var.region_code}-fwd"
 }
 

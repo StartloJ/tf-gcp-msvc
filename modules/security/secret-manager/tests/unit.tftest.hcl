@@ -39,7 +39,7 @@ run "plan_secret_with_initial_value" {
   command = plan
 
   variables {
-    initial_value   = "super-secret-value"
+    initial_value    = "super-secret-value"
     accessor_members = ["serviceAccount:app@test-prj.iam.gserviceaccount.com"]
   }
 

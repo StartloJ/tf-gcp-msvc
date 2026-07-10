@@ -1,6 +1,6 @@
 locals {
-  swp_name        = "swp-${var.org}-${var.domain}-egress-${var.env}-${var.region_code}"
-  policy_name     = "swp-policy-${var.org}-${var.domain}-${var.env}-${var.region_code}"
+  swp_name          = "swp-${var.org}-${var.domain}-egress-${var.env}-${var.region_code}"
+  policy_name       = "swp-policy-${var.org}-${var.domain}-${var.env}-${var.region_code}"
   proxy_subnet_name = "subnet-${var.org}-${var.domain}-proxy-${var.env}-${var.region_code}"
 }
 
@@ -53,15 +53,15 @@ resource "google_network_security_gateway_security_policy_rule" "deny" {
 }
 
 resource "google_network_services_gateway" "this" {
-  provider               = google-beta
-  project                = var.project_id
-  location               = var.region
-  name                   = local.swp_name
-  type                   = "SECURE_WEB_GATEWAY"
-  ports                  = [443]
-  scope                  = local.swp_name
-  network                = var.network_id
-  subnetwork             = google_compute_subnetwork.proxy.id
+  provider                = google-beta
+  project                 = var.project_id
+  location                = var.region
+  name                    = local.swp_name
+  type                    = "SECURE_WEB_GATEWAY"
+  ports                   = [443]
+  scope                   = local.swp_name
+  network                 = var.network_id
+  subnetwork              = google_compute_subnetwork.proxy.id
   gateway_security_policy = google_network_security_gateway_security_policy.this.id
-  certificate_urls       = var.enable_tls_inspection && var.certificate_map_id != "" ? [var.certificate_map_id] : []
+  certificate_urls        = var.enable_tls_inspection && var.certificate_map_id != "" ? [var.certificate_map_id] : []
 }

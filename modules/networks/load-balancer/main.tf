@@ -109,11 +109,11 @@ resource "google_compute_global_forwarding_rule" "global" {
 }
 
 resource "google_compute_region_target_https_proxy" "regional" {
-  count   = local.is_global ? 0 : 1
-  project = var.project_id
-  region  = var.region
-  name    = "${local.lb_name}-https-proxy"
-  url_map = google_compute_region_url_map.regional[0].id
+  count            = local.is_global ? 0 : 1
+  project          = var.project_id
+  region           = var.region
+  name             = "${local.lb_name}-https-proxy"
+  url_map          = google_compute_region_url_map.regional[0].id
   ssl_certificates = var.custom_ssl_certificate_id != "" ? [var.custom_ssl_certificate_id] : []
 }
 

@@ -12,12 +12,12 @@ resource "google_dataplex_lake" "this" {
 resource "google_dataplex_zone" "zones" {
   for_each = var.zones
 
-  project      = var.project_id
-  location     = var.region
-  lake         = google_dataplex_lake.this.name
-  name         = each.key
-  type         = each.value.type
-  labels       = var.labels
+  project  = var.project_id
+  location = var.region
+  lake     = google_dataplex_lake.this.name
+  name     = each.key
+  type     = each.value.type
+  labels   = var.labels
 
   resource_spec {
     location_type = "SINGLE_REGION"
@@ -37,12 +37,12 @@ resource "google_dataplex_asset" "buckets" {
     ]) : "${pair.zone}/${pair.bucket}" => pair
   }
 
-  project   = var.project_id
-  location  = var.region
-  lake      = google_dataplex_lake.this.name
+  project       = var.project_id
+  location      = var.region
+  lake          = google_dataplex_lake.this.name
   dataplex_zone = google_dataplex_zone.zones[each.value.zone].name
-  name      = replace(each.value.bucket, "/[^a-z0-9-]/", "-")
-  labels    = var.labels
+  name          = replace(each.value.bucket, "/[^a-z0-9-]/", "-")
+  labels        = var.labels
 
   resource_spec {
     name = "projects/${var.project_id}/buckets/${each.value.bucket}"

@@ -52,8 +52,3 @@ variable "deidentify_template_display_name" {
   default     = ""
 }
 
-variable "deidentify_transformation" {
-  type        = string
-  description = "Primitive transformation type for de-identification. Supported value: REPLACE_WITH_INFO_TYPE."
-  default     = "REPLACE_WITH_INFO_TYPE"
-}

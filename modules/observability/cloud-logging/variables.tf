@@ -70,8 +70,3 @@ variable "metric_descriptors" {
   default     = {}
 }
 
-variable "alert_notification_channels" {
-  type        = list(string)
-  description = "List of notification channel resource names for alert policies created from log-based metrics."
-  default     = []
-}

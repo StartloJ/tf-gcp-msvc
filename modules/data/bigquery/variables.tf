@@ -9,9 +9,10 @@ variable "region" {
   default     = "asia-southeast1"
 }
 
+# tflint-ignore: terraform_unused_declarations
 variable "org" {
   type        = string
-  description = "Organisation abbreviation used in resource naming (e.g. obk)."
+  description = "Organisation abbreviation. Kept for module interface consistency; BigQuery dataset IDs use domain/env/region_code without org."
 }
 
 variable "domain" {

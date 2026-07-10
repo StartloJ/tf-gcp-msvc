@@ -58,9 +58,10 @@ variable "denied_url_patterns" {
   default     = []
 }
 
+# tflint-ignore: terraform_unused_declarations
 variable "default_action" {
   type        = string
-  description = "Default action for traffic that does not match any explicit rule. deny (recommended for enterprise) or allow."
+  description = "Default action for traffic that does not match any explicit rule. deny (recommended for enterprise) or allow. Reserved for future default-rule implementation."
   default     = "deny"
 
   validation {

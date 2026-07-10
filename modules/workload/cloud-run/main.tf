@@ -2,8 +2,8 @@ locals {
   service_name = "cr-${var.org}-${var.domain}-${var.service_name_suffix}-${var.env}-${var.region_code}"
 
   ingress_map = {
-    "all"                              = "INGRESS_TRAFFIC_ALL"
-    "internal"                         = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+    "all"                               = "INGRESS_TRAFFIC_ALL"
+    "internal"                          = "INGRESS_TRAFFIC_INTERNAL_ONLY"
     "internal-and-cloud-load-balancing" = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   }
 }

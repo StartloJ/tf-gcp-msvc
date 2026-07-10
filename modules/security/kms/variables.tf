@@ -55,9 +55,3 @@ variable "key_iam_bindings" {
   description = "Map of crypto key name to list of IAM members granted roles/cloudkms.cryptoKeyEncrypterDecrypter."
   default     = {}
 }
-
-variable "prevent_destroy" {
-  type        = bool
-  description = "When true (default), key rings and crypto keys have prevent_destroy = true in their lifecycle block. Set to false only when decommissioning keys."
-  default     = true
-}

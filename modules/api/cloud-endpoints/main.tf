@@ -1,6 +1,6 @@
 resource "google_endpoints_service" "this" {
-  project      = var.project_id
-  service_name = var.service_name
+  project        = var.project_id
+  service_name   = var.service_name
   openapi_config = var.openapi_spec
 }
 
